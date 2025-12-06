@@ -1,12 +1,8 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AppConfig, GameType, MessageData } from "../types";
+import { AppConfig, GameType, MessageData, DEFAULT_API_URL } from "../types";
 import { getConfig } from "../services/storageService";
 import { Bubble } from "../components/Bubble";
-
-// Fixed Resolution
-const CANVAS_WIDTH = 3840;
-const CANVAS_HEIGHT = 640;
 
 export const BroadcastPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -18,81 +14,105 @@ export const BroadcastPage: React.FC = () => {
     const urlApi = searchParams.get('api');
     const urlAnim = searchParams.get('anim');
 
+    // Default to true for broadcast view
+    const shouldAnimate = urlAnim !== null ? (urlAnim === 'true') : true;
+
+    // Ensure we have a valid API URL, fallback to default if missing
+    // Priority: URL Param -> Local Storage -> Default Constant
+    const validApiUrl = urlApi || local.apiUrl || DEFAULT_API_URL;
+
     return {
       game: urlGame || local.game,
-      apiUrl: urlApi || local.apiUrl,
-      isAnimating: urlAnim ? (urlAnim === 'true') : local.isAnimating,
+      apiUrl: validApiUrl,
+      isAnimating: shouldAnimate,
       lastResetTimestamp: local.lastResetTimestamp
     };
   });
 
   const [messages, setMessages] = useState<MessageData[]>([]);
-  // We track processed IDs to prevent "zombies" from reappearing after a fetch
   const processedIds = useRef<Set<string | number>>(new Set());
   const pollInterval = useRef<number | null>(null);
   const lastKnownReset = useRef<number>(config.lastResetTimestamp);
 
-  // Force body background to be transparent when on this page
-  // This overrides the 'bg-gray-900' or similar set in index.html
+  // Force body and html background to be transparent
   useEffect(() => {
     const originalBodyBackground = document.body.style.backgroundColor;
+    const originalHtmlBackground = document.documentElement.style.backgroundColor;
+    
     document.body.style.backgroundColor = 'transparent';
+    document.documentElement.style.backgroundColor = 'transparent';
 
     return () => {
-      // Revert when leaving the broadcast page
       document.body.style.backgroundColor = originalBodyBackground || '';
+      document.documentElement.style.backgroundColor = originalHtmlBackground || '';
     };
   }, []);
 
-  // Sync config from local storage (if on same machine/browser context)
+  // Sync config from local storage
   useEffect(() => {
     const handleStorageChange = () => {
       const newConfig = getConfig();
       console.log("Broadcast received config update:", newConfig);
-      // We merge to ensure we get the latest 'isAnimating' and 'lastResetTimestamp'
       setConfig(prev => ({
         ...prev,
-        game: newConfig.game, // Sync game theme
-        isAnimating: newConfig.isAnimating, // Sync play/stop
-        lastResetTimestamp: newConfig.lastResetTimestamp, // Sync clear
-        apiUrl: newConfig.apiUrl // Sync API
+        game: newConfig.game,
+        isAnimating: newConfig.isAnimating,
+        lastResetTimestamp: newConfig.lastResetTimestamp,
+        // If the new config has an API URL, use it, otherwise keep current or default
+        apiUrl: newConfig.apiUrl || prev.apiUrl || DEFAULT_API_URL
       }));
     };
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  // Handle Reset Signal (Apagar)
+  // Handle Reset Signal
   useEffect(() => {
     if (config.lastResetTimestamp > lastKnownReset.current) {
       console.log("Broadcast executing CLEAR command");
-      setMessages([]); // Wipe visual elements
-      // NOTE: We do NOT clear processedIds. This ensures that old messages 
-      // from the API history don't immediately flood back in. 
-      // Only NEW messages (IDs we haven't seen) will appear.
+      setMessages([]);
+      // We do NOT clear processedIds to prevent old messages from re-flooding
       lastKnownReset.current = config.lastResetTimestamp;
     }
   }, [config.lastResetTimestamp]);
 
   const fetchMessages = useCallback(async () => {
-    if (!config.apiUrl) return;
+    // Explicitly fallback to default if config.apiUrl is empty string
+    const targetUrl = config.apiUrl || DEFAULT_API_URL;
+    if (!targetUrl) return;
 
     try {
-      const response = await fetch(config.apiUrl);
-      const json = await response.json();
+      // Add timestamp to prevent caching
+      const separator = targetUrl.includes('?') ? '&' : '?';
+      const fetchUrl = `${targetUrl}${separator}_t=${Date.now()}`;
 
+      const response = await fetch(fetchUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        cache: 'no-store'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const json = await response.json();
       let newRawMessages: any[] = [];
       
-      // Handle payload schema: {"success":true, "data": { "messages": [...] }}
+      // Robust JSON Parsing Strategies
       if (json.data && Array.isArray(json.data.messages)) {
+        // { data: { messages: [...] } }
         newRawMessages = json.data.messages;
-      } 
-      // Fallback: { messages: [] }
-      else if (json.messages && Array.isArray(json.messages)) {
+      } else if (json.messages && Array.isArray(json.messages)) {
+        // { messages: [...] }
         newRawMessages = json.messages;
-      } 
-      // Fallback: Array directly
-      else if (Array.isArray(json)) {
+      } else if (json.data && Array.isArray(json.data)) {
+        // { data: [...] }
+        newRawMessages = json.data;
+      } else if (Array.isArray(json)) {
+        // [...]
         newRawMessages = json;
       }
 
@@ -105,10 +125,11 @@ export const BroadcastPage: React.FC = () => {
         if (!processedIds.current.has(id)) {
           processedIds.current.add(id);
           
-          const x = Math.random() * 85; 
-          const y = Math.random() * 75;
+          // Randomize position: x (5% to 80%), y (5% to 75%)
+          // Using slightly safer bounds to prevent overflow
+          const x = 5 + Math.random() * 75; 
+          const y = 5 + Math.random() * 70;
 
-          // Map API fields to internal MessageData structure
           newItems.push({
             id: id,
             text: msg.message || "No text",
@@ -121,9 +142,10 @@ export const BroadcastPage: React.FC = () => {
       });
 
       if (newItems.length > 0) {
+        console.log(`Adding ${newItems.length} new bubbles`);
         setMessages((prev) => {
           const combined = [...prev, ...newItems];
-          // Keep a manageable buffer size to prevent memory issues
+          // Limit total bubbles on screen to prevent performance degradation
           if (combined.length > 50) {
              return combined.slice(combined.length - 50);
           }
@@ -136,18 +158,21 @@ export const BroadcastPage: React.FC = () => {
     }
   }, [config.apiUrl]);
 
-  // Handle Animation Loop (Iniciar / Parar)
+  // Handle Animation Loop
   useEffect(() => {
+    // Clear any existing interval first
+    if (pollInterval.current) {
+      clearInterval(pollInterval.current);
+      pollInterval.current = null;
+    }
+
     if (config.isAnimating) {
-      console.log("Starting animation loop...");
+      console.log("Starting animation loop... URL:", config.apiUrl);
       fetchMessages(); // Immediate fetch
+      // Poll every 3 seconds for faster updates
       pollInterval.current = window.setInterval(fetchMessages, 3000);
     } else {
       console.log("Stopping animation loop...");
-      if (pollInterval.current) {
-        clearInterval(pollInterval.current);
-        pollInterval.current = null;
-      }
     }
 
     return () => {
@@ -158,8 +183,8 @@ export const BroadcastPage: React.FC = () => {
   return (
     <div 
       style={{ 
-        width: `${CANVAS_WIDTH}px`, 
-        height: `${CANVAS_HEIGHT}px`,
+        width: '100vw', 
+        height: '100vh',
         backgroundColor: 'transparent'
       }}
       className="relative overflow-hidden"
@@ -171,12 +196,6 @@ export const BroadcastPage: React.FC = () => {
           gameType={config.game} 
         />
       ))}
-      
-      {/* 
-        No placeholder text is rendered here. 
-        Background is handled by useEffect clearing the document body color.
-        If logic ensures empty div if no messages.
-      */}
     </div>
   );
 };
