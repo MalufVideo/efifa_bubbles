@@ -32,20 +32,15 @@ export const BroadcastPage: React.FC = () => {
   const pollInterval = useRef<number | null>(null);
   const lastKnownReset = useRef<number>(config.lastResetTimestamp);
 
-  // Force both html and body backgrounds to be transparent when on this page
+  // Force body background to be transparent when on this page
   // This overrides the 'bg-gray-900' or similar set in index.html
-  // Both elements must be transparent to avoid white background showing through
   useEffect(() => {
     const originalBodyBackground = document.body.style.backgroundColor;
-    const originalHtmlBackground = document.documentElement.style.backgroundColor;
-
     document.body.style.backgroundColor = 'transparent';
-    document.documentElement.style.backgroundColor = 'transparent';
 
     return () => {
       // Revert when leaving the broadcast page
       document.body.style.backgroundColor = originalBodyBackground || '';
-      document.documentElement.style.backgroundColor = originalHtmlBackground || '';
     };
   }, []);
 
