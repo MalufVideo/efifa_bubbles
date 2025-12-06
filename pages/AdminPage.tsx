@@ -26,15 +26,15 @@ export const AdminPage: React.FC = () => {
 
   // Update the generated link whenever config changes
   useEffect(() => {
-    // Generate a hash-based link that works in preview and production
-    // e.g., https://nelsonoliveira.com/bubbles/#/broadcast?game=...
-    const baseUrl = window.location.href.split('#')[0];
+    // Generate direct link to broadcast.html with query params
+    // e.g., https://bubbles.nelsonoliveira.com/broadcast.html?game=...
+    const origin = window.location.origin;
     const params = new URLSearchParams();
     params.set('game', config.game);
     params.set('api', config.apiUrl);
     params.set('anim', config.isAnimating ? 'true' : 'false');
-    
-    const link = `${baseUrl}#/broadcast?${params.toString()}`;
+
+    const link = `${origin}/broadcast.html?${params.toString()}`;
     setGeneratedLink(link);
   }, [config]);
 
@@ -253,6 +253,25 @@ export const AdminPage: React.FC = () => {
           <div className="mt-6 flex items-center gap-2 text-sm text-gray-500">
              <div className={`w-2 h-2 rounded-full ${config.isAnimating ? 'bg-green-500 animate-ping' : 'bg-gray-600'}`}></div>
              Status: {config.isAnimating ? "AO VIVO" : "OFFLINE"}
+          </div>
+
+          {/* Broadcast Link for OBS/other computers */}
+          <div className="mt-8 pt-6 border-t border-gray-700 w-full max-w-xl">
+            <p className="text-sm text-gray-400 mb-2 text-center">Link para OBS / Outro Computador:</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={generatedLink}
+                readOnly
+                className="flex-grow bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-300 font-mono truncate"
+              />
+              <button
+                onClick={copyLink}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-semibold transition-colors"
+              >
+                Copiar
+              </button>
+            </div>
           </div>
         </section>
       </div>
