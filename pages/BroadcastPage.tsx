@@ -1,16 +1,21 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
 import { AppConfig, GameType, MessageData } from "../types";
 import { getConfig } from "../services/storageService";
 import { Bubble } from "../components/Bubble";
+
+// Helper to get URL search params without React Router
+const getUrlSearchParams = () => {
+  if (typeof window !== 'undefined') {
+    return new URLSearchParams(window.location.search);
+  }
+  return new URLSearchParams();
+};
 
 // Fixed Resolution
 const CANVAS_WIDTH = 3840;
 const CANVAS_HEIGHT = 640;
 
 export const BroadcastPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-
   // Set transparent background for OBS/streaming overlay
   useEffect(() => {
     const originalBg = document.body.style.backgroundColor;
@@ -22,11 +27,12 @@ export const BroadcastPage: React.FC = () => {
       document.documentElement.style.backgroundColor = originalBg;
     };
   }, []);
-  
+
   // Initialize config merging LocalStorage with URL Parameters
   // URL params take precedence for separate computer setup
   const [config, setConfig] = useState<AppConfig>(() => {
     const local = getConfig();
+    const searchParams = getUrlSearchParams();
     const urlGame = searchParams.get('game') as GameType;
     const urlApi = searchParams.get('api');
     const urlAnim = searchParams.get('anim');
