@@ -3,10 +3,22 @@ import { AppConfig, GameType, MessageData } from "../types";
 import { getConfig } from "../services/storageService";
 import { Bubble } from "../components/Bubble";
 
-// Helper to get URL search params without React Router
+// Helper to get URL search params from both query string and hash fragment
+// This handles both:
+// - Direct URL params: broadcast.html?game=EMOBILE&api=...
+// - Hash-based params: /#/broadcast?game=EMOBILE&api=...
 const getUrlSearchParams = () => {
   if (typeof window !== 'undefined') {
-    return new URLSearchParams(window.location.search);
+    // First check regular query string
+    if (window.location.search) {
+      return new URLSearchParams(window.location.search);
+    }
+    // Then check hash fragment for params (e.g., #/broadcast?game=...)
+    const hash = window.location.hash;
+    const hashQueryIndex = hash.indexOf('?');
+    if (hashQueryIndex !== -1) {
+      return new URLSearchParams(hash.substring(hashQueryIndex));
+    }
   }
   return new URLSearchParams();
 };
