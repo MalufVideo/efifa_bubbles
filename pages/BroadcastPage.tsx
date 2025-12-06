@@ -10,6 +10,18 @@ const CANVAS_HEIGHT = 640;
 
 export const BroadcastPage: React.FC = () => {
   const [searchParams] = useSearchParams();
+
+  // Set transparent background for OBS/streaming overlay
+  useEffect(() => {
+    const originalBg = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = 'transparent';
+    document.documentElement.style.backgroundColor = 'transparent';
+
+    return () => {
+      document.body.style.backgroundColor = originalBg;
+      document.documentElement.style.backgroundColor = originalBg;
+    };
+  }, []);
   
   // Initialize config merging LocalStorage with URL Parameters
   // URL params take precedence for separate computer setup
@@ -138,13 +150,7 @@ export const BroadcastPage: React.FC = () => {
         />
       ))}
       
-      {!config.isAnimating && messages.length === 0 && (
-         <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-white/30 text-4xl font-bold uppercase tracking-widest">
-                Aguardando Transmissão...
-            </p>
-         </div>
-      )}
+      {/* Page is blank/transparent when not animating - ready for OBS overlay */}
     </div>
   );
 };
