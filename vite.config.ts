@@ -14,6 +14,14 @@ export default defineConfig(() => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+      build: {
+        rollupOptions: {
+          input: {
+            main: path.resolve(__dirname, 'index.html'),
+            broadcast: path.resolve(__dirname, 'broadcast.html'),
+          },
+        },
+      },
     };
 });
