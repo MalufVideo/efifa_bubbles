@@ -77,26 +77,29 @@ export const BroadcastPage: React.FC = () => {
       let newRawMessages: any[] = [];
       if (Array.isArray(data)) {
         newRawMessages = data;
+      } else if (data.data?.messages && Array.isArray(data.data.messages)) {
+        // Handle nested structure: { success: true, data: { messages: [...] } }
+        newRawMessages = data.data.messages;
       } else if (data.messages && Array.isArray(data.messages)) {
         newRawMessages = data.messages;
       }
 
       const newItems: MessageData[] = [];
-      
+
       newRawMessages.forEach((msg) => {
-        const id = msg.id || `${msg.author}-${msg.text}-${Date.now()}`;
-        
+        const id = msg.id || `${msg.fan_name}-${msg.message}-${Date.now()}`;
+
         if (!processedIds.current.has(id)) {
           processedIds.current.add(id);
-          
-          const x = Math.random() * 85; 
+
+          const x = Math.random() * 85;
           const y = Math.random() * 75;
 
           newItems.push({
             id: id,
-            text: msg.message || msg.text || "No text content",
-            author: msg.author || msg.sender || "Anonymous",
-            timestamp: msg.timestamp || new Date().toISOString(),
+            message: msg.message || msg.text || "",
+            fan_name: msg.fan_name || null,
+            timestamp: msg.created_at || msg.timestamp || new Date().toISOString(),
             x,
             y
           });

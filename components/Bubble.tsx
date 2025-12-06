@@ -38,14 +38,16 @@ export const Bubble: React.FC<BubbleProps> = ({ message, gameType }) => {
   return (
     <div
       style={style}
-      className="rounded-3xl px-6 py-4 text-white font-bold tracking-wide pointer-events-none"
+      className="rounded-3xl px-6 py-4 text-white pointer-events-none"
     >
-      <p className="text-lg leading-tight drop-shadow-md">{message.text}</p>
-      {message.author && (
-        <p className="text-xs mt-2 opacity-90 text-right uppercase tracking-wider font-extrabold drop-shadow-sm">
-          - {message.author}
+      {message.fan_name && (
+        <p className="font-condensed text-sm mb-1 opacity-90 uppercase tracking-wider drop-shadow-sm">
+          {message.fan_name}
         </p>
       )}
+      <p className="font-anybody text-lg font-bold leading-tight drop-shadow-md">
+        {message.message}
+      </p>
     </div>
   );
 };

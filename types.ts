@@ -14,11 +14,11 @@ export interface GameTheme {
 
 export interface MessageData {
   id: string | number;
-  text: string;
-  author?: string;
+  message: string;
+  fan_name?: string;
   timestamp?: string;
   // We add these for internal positioning logic
-  x?: number; 
+  x?: number;
   y?: number;
 }
 
