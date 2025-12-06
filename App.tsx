@@ -3,10 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AdminPage } from "./pages/AdminPage";
 import { BroadcastPage } from "./pages/BroadcastPage";
 
-// Determine basename based on environment
-// In production with Traefik strip-prefix, we need /bubbles
-// Traefik strips /bubbles but the browser URL still has it
-const basename = "/bubbles";
+// Use root basename since app is deployed on subdomain (bubbles.nelsonoliveira.com)
+const basename = "/";
 
 const App: React.FC = () => {
   return (
