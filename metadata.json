@@ -1,0 +1,5 @@
+{
+  "name": "LiveMessageWall",
+  "description": "A dual-view application for broadcasting real-time messages with game-specific themes.",
+  "requestFramePermissions": []
+}
