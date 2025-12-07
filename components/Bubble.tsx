@@ -5,9 +5,10 @@ import { GAMES } from "../constants";
 interface BubbleProps {
   message: MessageData;
   gameType: GameType;
+  fontSize?: number;
 }
 
-export const Bubble: React.FC<BubbleProps> = ({ message, gameType }) => {
+export const Bubble: React.FC<BubbleProps> = ({ message, gameType, fontSize = 18 }) => {
   const [visible, setVisible] = useState(false);
   // Fallback to EMOBILE if gameType is somehow undefined to prevent crash
   const theme = GAMES[gameType] || GAMES[GameType.EMOBILE];
@@ -20,13 +21,23 @@ export const Bubble: React.FC<BubbleProps> = ({ message, gameType }) => {
     return () => cancelAnimationFrame(timer);
   }, []);
 
+  // Calculate dynamic sizing based on font size
+  const baseFontSize = 18;
+  const scaleFactor = fontSize / baseFontSize;
+  const padding = `${Math.round(16 * scaleFactor)}px ${Math.round(24 * scaleFactor)}px`;
+  const maxWidth = Math.round(400 * scaleFactor);
+  const authorFontSize = Math.max(10, Math.round(fontSize * 0.65));
+
   // Inline styles for dynamic gradients
   const style: React.CSSProperties = {
     position: "absolute",
     left: `${message.x}%`,
     top: `${message.y}%`,
     background: `linear-gradient(to right, ${theme.gradientFrom}, ${theme.gradientTo})`,
-    maxWidth: "400px",
+    maxWidth: `${maxWidth}px`,
+    padding,
+    fontSize: `${fontSize}px`,
+    lineHeight: '1.25',
     // Start smaller (0.5) to create a 'pop' effect when scaling to 1
     transform: visible ? "scale(1)" : "scale(0.5)",
     opacity: visible ? 1 : 0,
@@ -40,11 +51,14 @@ export const Bubble: React.FC<BubbleProps> = ({ message, gameType }) => {
   return (
     <div
       style={style}
-      className="rounded-3xl px-6 py-4 text-white font-bold tracking-wide pointer-events-none"
+      className="rounded-3xl text-white font-bold tracking-wide pointer-events-none"
     >
-      <p className="text-lg leading-tight drop-shadow-md">{message.text}</p>
+      <p className="leading-tight drop-shadow-md">{message.text}</p>
       {message.author && (
-        <p className="text-xs mt-2 opacity-90 text-right uppercase tracking-wider font-extrabold drop-shadow-sm">
+        <p 
+          className="mt-2 opacity-90 text-right uppercase tracking-wider font-extrabold drop-shadow-sm"
+          style={{ fontSize: `${authorFontSize}px` }}
+        >
           - {message.author}
         </p>
       )}

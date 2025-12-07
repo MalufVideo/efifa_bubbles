@@ -27,6 +27,8 @@ export interface AppConfig {
   apiUrl: string;
   isAnimating: boolean;
   lastResetTimestamp: number;
+  fontSize: number; // Font size in pixels (default 18)
+  deletedIds: (string | number)[]; // IDs of messages hidden from broadcast
 }
 
 export const DEFAULT_API_URL = "https://events.tinytoolkit.io/api/well-wishes/messages/live?team=barcelona";

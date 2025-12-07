@@ -12,7 +12,9 @@ export const BroadcastPage: React.FC = () => {
     game: GameType.EMOBILE,
     apiUrl: DEFAULT_API_URL,
     isAnimating: true, // Auto-start by default
-    lastResetTimestamp: 0
+    lastResetTimestamp: 0,
+    fontSize: 18,
+    deletedIds: []
   });
 
   const [messages, setMessages] = useState<MessageData[]>([]);
@@ -40,7 +42,9 @@ export const BroadcastPage: React.FC = () => {
             game: serverConfig.game || prev.game,
             apiUrl: serverConfig.apiUrl || prev.apiUrl,
             isAnimating: serverConfig.isAnimating ?? prev.isAnimating,
-            lastResetTimestamp: serverConfig.lastResetTimestamp ?? prev.lastResetTimestamp
+            lastResetTimestamp: serverConfig.lastResetTimestamp ?? prev.lastResetTimestamp,
+            fontSize: serverConfig.fontSize ?? prev.fontSize,
+            deletedIds: serverConfig.deletedIds ?? prev.deletedIds
           }));
         }
       } catch (err) {
@@ -191,11 +195,12 @@ export const BroadcastPage: React.FC = () => {
           {config.isAnimating ? 'Waiting for messages...' : 'Animation paused'}
         </div>
       )}
-      {messages.map((msg) => (
+      {messages.filter(msg => !(config.deletedIds || []).includes(msg.id)).map((msg) => (
         <Bubble 
           key={msg.id} 
           message={msg} 
-          gameType={config.game} 
+          gameType={config.game}
+          fontSize={config.fontSize}
         />
       ))}
     </div>

@@ -17,7 +17,9 @@ let appConfig = {
   game: 'EMOBILE', 
   apiUrl: 'https://events.tinytoolkit.io/api/well-wishes/messages/live?team=barcelona', 
   isAnimating: true,  // Auto-start by default
-  lastResetTimestamp: 0
+  lastResetTimestamp: 0,
+  fontSize: 18,
+  deletedIds: [] // IDs of messages to hide from broadcast
 };
 
 // API Endpoints
