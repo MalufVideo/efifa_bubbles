@@ -12,10 +12,10 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Default Config
+// Default Config (game values must match GameType enum: EMOBILE, ECONSOLE, ROCKET_LEAGUE)
 let appConfig = {
-  game: 'emobile', 
-  apiUrl: '', 
+  game: 'EMOBILE', 
+  apiUrl: 'https://events.tinytoolkit.io/api/well-wishes/messages/live?team=barcelona', 
   isAnimating: false,
   lastResetTimestamp: 0
 };

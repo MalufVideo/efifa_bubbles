@@ -1,27 +1,49 @@
-import React, { useState, useEffect } from "react";
-import { AppConfig, GameType } from "../types";
+import React, { useState, useEffect, useCallback } from "react";
+import { AppConfig, GameType, DEFAULT_API_URL } from "../types";
 import { GAMES } from "../constants";
-import { getConfig, saveConfig } from "../services/storageService";
+
+// Helper to update server config
+const updateServerConfig = async (newConfig: Partial<AppConfig>) => {
+  try {
+    await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newConfig)
+    });
+  } catch (err) {
+    console.error("Failed to update server config:", err);
+  }
+};
 
 export const AdminPage: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   
-  const [config, setConfig] = useState<AppConfig>(getConfig());
-  const [tempUrl, setTempUrl] = useState(config.apiUrl);
+  const [config, setConfig] = useState<AppConfig>({
+    game: GameType.EMOBILE,
+    apiUrl: DEFAULT_API_URL,
+    isAnimating: false,
+    lastResetTimestamp: 0
+  });
+  const [tempUrl, setTempUrl] = useState(DEFAULT_API_URL);
   const [isSaved, setIsSaved] = useState(true);
   const [generatedLink, setGeneratedLink] = useState("");
 
-  // Poll for external changes (local storage sync within same browser)
+  // Fetch initial config from server
   useEffect(() => {
-    const handleStorageChange = () => {
-      const newConfig = getConfig();
-      setConfig((prev) => 
-        JSON.stringify(prev) !== JSON.stringify(newConfig) ? newConfig : prev
-      );
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const serverConfig = await res.json();
+          setConfig(serverConfig);
+          setTempUrl(serverConfig.apiUrl || DEFAULT_API_URL);
+        }
+      } catch (err) {
+        console.error("Failed to fetch config:", err);
+      }
     };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    fetchConfig();
   }, []);
 
   // Update the generated link whenever config changes
@@ -50,7 +72,7 @@ export const AdminPage: React.FC = () => {
   const handleGameSelect = (game: GameType) => {
     const newConfig = { ...config, game };
     setConfig(newConfig);
-    saveConfig(newConfig);
+    updateServerConfig(newConfig);
   };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,21 +83,21 @@ export const AdminPage: React.FC = () => {
   const handleSaveUrl = () => {
     const newConfig = { ...config, apiUrl: tempUrl };
     setConfig(newConfig);
-    saveConfig(newConfig);
+    updateServerConfig(newConfig);
     setIsSaved(true);
   };
 
   const toggleAnimation = () => {
     const newConfig = { ...config, isAnimating: !config.isAnimating };
     setConfig(newConfig);
-    saveConfig(newConfig);
+    updateServerConfig(newConfig);
   };
 
   const handleClear = () => {
     // Update timestamp to trigger clear in listeners
     const newConfig = { ...config, lastResetTimestamp: Date.now() };
     setConfig(newConfig);
-    saveConfig(newConfig);
+    updateServerConfig(newConfig);
   };
 
   const copyLink = () => {

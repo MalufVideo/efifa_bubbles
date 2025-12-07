@@ -1,69 +1,59 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
 import { AppConfig, GameType, MessageData, DEFAULT_API_URL } from "../types";
-import { getConfig } from "../services/storageService";
 import { Bubble } from "../components/Bubble";
 
+// Fixed canvas size for broadcast overlay
+const CANVAS_WIDTH = 3840;
+const CANVAS_HEIGHT = 640;
+
 export const BroadcastPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  
-  // Initialize config merging LocalStorage with URL Parameters
-  const [config, setConfig] = useState<AppConfig>(() => {
-    const local = getConfig();
-    const urlGame = searchParams.get('game') as GameType;
-    const urlApi = searchParams.get('api');
-    const urlAnim = searchParams.get('anim');
-
-    // Default to true for broadcast view
-    const shouldAnimate = urlAnim !== null ? (urlAnim === 'true') : true;
-
-    // Ensure we have a valid API URL, fallback to default if missing
-    // Priority: URL Param -> Local Storage -> Default Constant
-    const validApiUrl = urlApi || local.apiUrl || DEFAULT_API_URL;
-
-    return {
-      game: urlGame || local.game,
-      apiUrl: validApiUrl,
-      isAnimating: shouldAnimate,
-      lastResetTimestamp: local.lastResetTimestamp
-    };
+  // Initialize config - will be fetched from server
+  const [config, setConfig] = useState<AppConfig>({
+    game: GameType.EMOBILE,
+    apiUrl: DEFAULT_API_URL,
+    isAnimating: false,
+    lastResetTimestamp: 0
   });
 
   const [messages, setMessages] = useState<MessageData[]>([]);
   const processedIds = useRef<Set<string | number>>(new Set());
   const pollInterval = useRef<number | null>(null);
-  const lastKnownReset = useRef<number>(config.lastResetTimestamp);
+  const configPollInterval = useRef<number | null>(null);
+  const lastKnownReset = useRef<number>(0);
 
   // Force body and html background to be transparent
   useEffect(() => {
-    const originalBodyBackground = document.body.style.backgroundColor;
-    const originalHtmlBackground = document.documentElement.style.backgroundColor;
-    
     document.body.style.backgroundColor = 'transparent';
     document.documentElement.style.backgroundColor = 'transparent';
-
-    return () => {
-      document.body.style.backgroundColor = originalBodyBackground || '';
-      document.documentElement.style.backgroundColor = originalHtmlBackground || '';
-    };
+    document.body.style.overflow = 'hidden';
   }, []);
 
-  // Sync config from local storage
+  // Poll server for config updates (admin controls)
   useEffect(() => {
-    const handleStorageChange = () => {
-      const newConfig = getConfig();
-      console.log("Broadcast received config update:", newConfig);
-      setConfig(prev => ({
-        ...prev,
-        game: newConfig.game,
-        isAnimating: newConfig.isAnimating,
-        lastResetTimestamp: newConfig.lastResetTimestamp,
-        // If the new config has an API URL, use it, otherwise keep current or default
-        apiUrl: newConfig.apiUrl || prev.apiUrl || DEFAULT_API_URL
-      }));
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const serverConfig = await res.json();
+          setConfig(prev => ({
+            ...prev,
+            game: serverConfig.game || prev.game,
+            apiUrl: serverConfig.apiUrl || prev.apiUrl,
+            isAnimating: serverConfig.isAnimating ?? prev.isAnimating,
+            lastResetTimestamp: serverConfig.lastResetTimestamp ?? prev.lastResetTimestamp
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch config:", err);
+      }
     };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+
+    fetchConfig(); // Initial fetch
+    configPollInterval.current = window.setInterval(fetchConfig, 1000); // Poll every second
+
+    return () => {
+      if (configPollInterval.current) clearInterval(configPollInterval.current);
+    };
   }, []);
 
   // Handle Reset Signal
@@ -183,11 +173,12 @@ export const BroadcastPage: React.FC = () => {
   return (
     <div 
       style={{ 
-        width: '100vw', 
-        height: '100vh',
-        backgroundColor: 'transparent'
+        width: `${CANVAS_WIDTH}px`, 
+        height: `${CANVAS_HEIGHT}px`,
+        backgroundColor: 'transparent',
+        position: 'relative',
+        overflow: 'hidden'
       }}
-      className="relative overflow-hidden"
     >
       {messages.map((msg) => (
         <Bubble 
