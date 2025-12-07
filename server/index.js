@@ -37,7 +37,8 @@ const buildPath = path.join(__dirname, '../dist');
 app.use(express.static(buildPath));
 
 // Handle client-side routing by returning index.html for all non-API routes
-app.get('*', (req, res) => {
+// Express 5 requires named wildcard parameters
+app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(buildPath, 'index.html'));
 });
 
