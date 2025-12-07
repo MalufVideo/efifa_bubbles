@@ -2,16 +2,16 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { AppConfig, GameType, MessageData, DEFAULT_API_URL } from "../types";
 import { Bubble } from "../components/Bubble";
 
-// Fixed canvas size for broadcast overlay
+// Fixed canvas size for broadcast overlay (aspect ratio 6:1)
 const CANVAS_WIDTH = 3840;
 const CANVAS_HEIGHT = 640;
 
 export const BroadcastPage: React.FC = () => {
-  // Initialize config - will be fetched from server
+  // Initialize config - auto-start animation by default
   const [config, setConfig] = useState<AppConfig>({
     game: GameType.EMOBILE,
     apiUrl: DEFAULT_API_URL,
-    isAnimating: false,
+    isAnimating: true, // Auto-start by default
     lastResetTimestamp: 0
   });
 
@@ -67,16 +67,9 @@ export const BroadcastPage: React.FC = () => {
   }, [config.lastResetTimestamp]);
 
   const fetchMessages = useCallback(async () => {
-    // Explicitly fallback to default if config.apiUrl is empty string
-    const targetUrl = config.apiUrl || DEFAULT_API_URL;
-    if (!targetUrl) return;
-
     try {
-      // Add timestamp to prevent caching
-      const separator = targetUrl.includes('?') ? '&' : '?';
-      const fetchUrl = `${targetUrl}${separator}_t=${Date.now()}`;
-
-      const response = await fetch(fetchUrl, {
+      // Use server proxy to bypass CORS issues
+      const response = await fetch(`/api/messages?_t=${Date.now()}`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -173,13 +166,26 @@ export const BroadcastPage: React.FC = () => {
   return (
     <div 
       style={{ 
-        width: `${CANVAS_WIDTH}px`, 
-        height: `${CANVAS_HEIGHT}px`,
+        width: '100vw', 
+        height: '100vh',
         backgroundColor: 'transparent',
         position: 'relative',
         overflow: 'hidden'
       }}
     >
+      {/* Debug indicator - remove in production if needed */}
+      {messages.length === 0 && (
+        <div style={{ 
+          position: 'absolute', 
+          top: 10, 
+          left: 10, 
+          color: 'rgba(255,255,255,0.3)', 
+          fontSize: '12px',
+          fontFamily: 'monospace'
+        }}>
+          {config.isAnimating ? 'Waiting for messages...' : 'Animation paused'}
+        </div>
+      )}
       {messages.map((msg) => (
         <Bubble 
           key={msg.id} 

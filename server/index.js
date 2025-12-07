@@ -16,7 +16,7 @@ app.use(express.json());
 let appConfig = {
   game: 'EMOBILE', 
   apiUrl: 'https://events.tinytoolkit.io/api/well-wishes/messages/live?team=barcelona', 
-  isAnimating: false,
+  isAnimating: true,  // Auto-start by default
   lastResetTimestamp: 0
 };
 
@@ -28,8 +28,31 @@ app.get('/api/config', (req, res) => {
 app.post('/api/config', (req, res) => {
   const newConfig = req.body;
   appConfig = { ...appConfig, ...newConfig };
-  // console.log('Config updated:', appConfig);
+  console.log('Config updated:', appConfig);
   res.json(appConfig);
+});
+
+// Proxy endpoint to fetch messages (bypasses CORS)
+app.get('/api/messages', async (req, res) => {
+  try {
+    const targetUrl = appConfig.apiUrl || 'https://events.tinytoolkit.io/api/well-wishes/messages/live?team=barcelona';
+    const separator = targetUrl.includes('?') ? '&' : '?';
+    const fetchUrl = `${targetUrl}${separator}_t=${Date.now()}`;
+    
+    const response = await fetch(fetchUrl, {
+      headers: { 'Accept': 'application/json' }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API returned ${response.status}`);
+    }
+    
+    const data = await response.json();
+    res.json(data);
+  } catch (error) {
+    console.error('Proxy fetch error:', error.message);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Serve static files from the React build (../dist)
