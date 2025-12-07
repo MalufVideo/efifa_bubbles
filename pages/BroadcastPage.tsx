@@ -59,9 +59,9 @@ export const BroadcastPage: React.FC = () => {
   // Handle Reset Signal
   useEffect(() => {
     if (config.lastResetTimestamp > lastKnownReset.current) {
-      console.log("Broadcast executing CLEAR command");
+      console.log("Broadcast executing CLEAR command - resetting everything");
       setMessages([]);
-      // We do NOT clear processedIds to prevent old messages from re-flooding
+      processedIds.current.clear(); // Clear so messages can animate again
       lastKnownReset.current = config.lastResetTimestamp;
     }
   }, [config.lastResetTimestamp]);
@@ -124,15 +124,20 @@ export const BroadcastPage: React.FC = () => {
         }
       });
 
+      // Stagger bubble additions - one every 300ms for smooth animation
       if (newItems.length > 0) {
-        console.log(`Adding ${newItems.length} new bubbles`);
-        setMessages((prev) => {
-          const combined = [...prev, ...newItems];
-          // Limit total bubbles on screen to prevent performance degradation
-          if (combined.length > 50) {
-             return combined.slice(combined.length - 50);
-          }
-          return combined;
+        console.log(`Queuing ${newItems.length} new bubbles for staggered display`);
+        newItems.forEach((item, index) => {
+          setTimeout(() => {
+            setMessages((prev) => {
+              const combined = [...prev, item];
+              // Limit total bubbles on screen
+              if (combined.length > 50) {
+                return combined.slice(combined.length - 50);
+              }
+              return combined;
+            });
+          }, index * 300); // 300ms delay between each bubble
         });
       }
 
